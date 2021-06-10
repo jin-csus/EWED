@@ -1,0 +1,311 @@
+<!-- <button (click)="setPredictedDate('1-1-2022','12-1-2022')">Test set date</button> -->
+
+<div id="queryForm_container">
+  <div class="select-query-form-container">
+    <mat-radio-group
+      aria-label="Select an option"
+      [formControl]="selectedQueryForm"
+      value=""
+      color="primary"
+    >
+      <mat-radio-button class="historic-option" value="historic"
+        >Historic</mat-radio-button
+      >
+      <mat-radio-button class="predicted-option" value="projected"
+        >Projected</mat-radio-button
+      >
+    </mat-radio-group>
+  </div>
+
+  <!-- Historic Form -->
+  <div
+    class="historic-form-container"
+    *ngIf="selectedQueryForm?.value === 'historic'"
+  >
+    <mat-form-field class="historic-search-keyword-input">
+      <input
+        type="text"
+        placeholder="Search for State, HUC or County..."
+        aria-label="County Name"
+        matInput
+        [formControl]="filterNameSearchInputControl"
+        [matAutocomplete]="forHistoricSearch"
+        value=""
+      />
+      <mat-autocomplete
+        #forHistoricSearch="matAutocomplete"
+        (optionSelected)="_animateSearchBtn()"
+      >
+        <mat-option
+          *ngFor="let option of filteredCountyList | async"
+          [value]="option"
+        >
+          {{ option }}
+        </mat-option>
+      </mat-autocomplete>
+      <mat-error *ngIf="filterNameSearchInputControl.invalid"
+        >Please enter or select a keyword from the list</mat-error
+      >
+    </mat-form-field>
+
+    <mat-form-field>
+      <input
+        #fromMonthHistoricYearInput="ngForm"
+        matInput
+        [matDatepicker]="fromMonthHistoricYear"
+        placeholder="Select From Month & Year"
+        [formControl]="date"
+        [min]="minDate"
+        [max]="maxDate"
+        [value]="startDate"
+      />
+      <mat-datepicker-toggle
+        matSuffix
+        [for]="fromMonthHistoricYear"
+      ></mat-datepicker-toggle>
+      <mat-datepicker
+        (opened)="datepickedOpened()"
+        #fromMonthHistoricYear
+        startView="multi-year"
+        (yearSelected)="chosenYearHandler($event)"
+        (monthSelected)="chosenMonthHandler($event, fromMonthHistoricYear)"
+        panelClass="from-month-picker"
+        [startAt]="startDate"
+      >
+      </mat-datepicker>
+      <mat-error *ngIf="date.invalid">Please enter a valid from date</mat-error>
+    </mat-form-field>
+
+    <mat-form-field>
+      <input
+        matInput
+        [matDatepicker]="toMonthHistoricYear"
+        placeholder="Select To Month & Year"
+        [formControl]="date2"
+        [min]="minDate2"
+        [max]="maxDate2"
+        [value]="startDate2"
+      />
+      <mat-datepicker-toggle
+        matSuffix
+        [for]="toMonthHistoricYear"
+      ></mat-datepicker-toggle>
+      <mat-datepicker
+        (opened)="datepickedOpened()"
+        #toMonthHistoricYear
+        startView="multi-year"
+        (yearSelected)="chosenYearHandler2($event)"
+        (monthSelected)="chosenMonthHandler2($event, toMonthHistoricYear)"
+        panelClass="to-month-picker"
+        [startAt]="startDate2"
+      >
+      </mat-datepicker>
+      <mat-error *ngIf="date2.invalid">Please enter a valid to date</mat-error>
+    </mat-form-field>
+
+    <button mat-raised-button (click)="openDialog()">
+      Filter By Fuel Types
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      [ngClass]="animateSearchBtn ? 'animate' : ''"
+      id="search-btn"
+      class=""
+      (click)="submitForm()"
+      [disabled]="
+        date.invalid || date2.invalid || filterNameSearchInputControl.invalid
+      "
+    >
+      Search
+    </button>
+
+    <button mat-raised-button id="reset-btn" routerLink="/">Reset View</button>
+  </div>
+
+  <!-- Projected Form -->
+  <div
+    class="predicted-form-container"
+    *ngIf="selectedQueryForm.value === 'projected'"
+  >
+    <div id="Predicted-query-form-container">
+      <mat-form-field class="energy-scenario">
+        <mat-label>Select Energy Scenario</mat-label>
+        <mat-select
+          (selectionChange)="_animateSearchBtn()"
+          [(value)]="selectedEnergyScenario"
+        >
+          <mat-option
+            *ngFor="let energyScenario of energyScenarios"
+            [value]="energyScenario.value"
+          >
+            {{ energyScenario.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div *ngIf="enableClimateDropDowns" class="climate-drop-downs-container">
+        <mat-form-field class="climate-scenario">
+          <mat-label>Select Climate Scenario</mat-label>
+          <mat-select
+            (selectionChange)="_animateSearchBtn(); resetClimateModel()"
+            [(value)]="selectedClimateScenario"
+          >
+            <mat-option value="RCP45"
+              >RCP 4.5 (Low emissions scenario)</mat-option
+            >
+            <mat-option value="RCP85"
+              >RCP 8.5 (High emissions scenario)</mat-option
+            >
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field
+          *ngIf="selectedClimateScenario == 'RCP45'"
+          class="climate-model"
+        >
+          <mat-label>Select Climate Model</mat-label>
+          <mat-select
+            (selectionChange)="_animateSearchBtn()"
+            [(value)]="selectedClimateModel"
+          >
+            <mat-option
+              *ngFor="let climateModel of climateModels45"
+              [value]="climateModel.value"
+            >
+              {{ climateModel.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field
+          *ngIf="selectedClimateScenario == 'RCP85'"
+          class="climate-model"
+        >
+          <mat-label>Select Climate Model</mat-label>
+          <mat-select
+            (selectionChange)="_animateSearchBtn()"
+            [(value)]="selectedClimateModel"
+          >
+            <mat-option
+              *ngFor="let climateModel of climateModels85"
+              [value]="climateModel.value"
+            >
+              {{ climateModel.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field class="search-box-predicted">
+        <input
+          type="text"
+          placeholder="Search for State, HUC or County..."
+          matInput
+          [formControl]="filterNameSearchInputControl"
+          [matAutocomplete]="forSearchPredicted"
+          value=""
+        />
+        <mat-autocomplete
+          #forSearchPredicted="matAutocomplete"
+          (optionSelected)="
+            _animateSearchBtn(); setClimateDropDownsVisibility()
+          "
+        >
+          <mat-option
+            *ngFor="let option of filteredCountyList | async"
+            [value]="option"
+          >
+            {{ option }}
+          </mat-option>
+        </mat-autocomplete>
+        <mat-error *ngIf="filterNameSearchInputControl.invalid"
+          >Please enter a valid search keyword</mat-error
+        >
+      </mat-form-field>
+
+      <mat-form-field class="predicted-date-picker-from">
+        <input
+          #fromMonthHistoricYearInputPredicted="ngForm"
+          matInput
+          [matDatepicker]="fromMonthHistoricYearPredicted"
+          placeholder="Select From Month & Year"
+          [formControl]="datePredicted"
+          [min]="minDatePredicted"
+          [max]="maxDatePredicted"
+          [value]="startDatePredicted"
+        />
+        <mat-datepicker-toggle
+          matSuffix
+          [for]="fromMonthHistoricYearPredicted"
+        ></mat-datepicker-toggle>
+
+        <mat-datepicker
+          #fromMonthHistoricYearPredicted
+          startView="multi-year"
+          (yearSelected)="chosenYearHandlerPredicted($event)"
+          (monthSelected)="
+            chosenMonthHandlerPredicted($event, fromMonthHistoricYearPredicted)
+          "
+          panelClass="from-month-picker-project"
+          [startAt]="startDatePredicted"
+        >
+        </mat-datepicker>
+        <mat-error *ngIf="datePredicted.invalid"
+          >Please enter a valid from date</mat-error
+        >
+      </mat-form-field>
+
+      <mat-form-field class="predicted-date-picker-to">
+        <input
+          matInput
+          [matDatepicker]="toMonthHistoricYearPredicted"
+          placeholder="Select To Month & Year"
+          [formControl]="date2Predicted"
+          [min]="minDate2Predicted"
+          [max]="maxDate2Predicted"
+          [value]="startDate2Predicted"
+        />
+        <mat-datepicker-toggle
+          matSuffix
+          [for]="toMonthHistoricYearPredicted"
+        ></mat-datepicker-toggle>
+        <mat-datepicker
+          #toMonthHistoricYearPredicted
+          startView="multi-year"
+          (yearSelected)="chosenYearHandler2Predicted($event)"
+          (monthSelected)="
+            chosenMonthHandler2Predicted($event, toMonthHistoricYearPredicted)
+          "
+          panelClass="to-month-picker-predicted"
+          [startAt]="startDate2Predicted"
+        >
+        </mat-datepicker>
+        <mat-error *ngIf="date2Predicted.invalid"
+          >Please enter a valid to date</mat-error
+        >
+      </mat-form-field>
+
+      <button mat-raised-button (click)="openDialog()">
+        Filter By Fuel Types
+      </button>
+
+      <button
+        mat-raised-button
+        color="primary"
+        id="search-btn"
+        class=""
+        [ngClass]="animateSearchBtn ? 'animate' : ''"
+        (click)="submitFormPredicted()"
+        [disabled]="datePredicted.invalid || date2Predicted.invalid || filterNameSearchInputControl.invalid"
+      >
+        Search
+      </button>
+
+      <button mat-raised-button id="reset-btn" routerLink="/">
+        Reset View
+      </button>
+    </div>
+  </div>
+</div>
