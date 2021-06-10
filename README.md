@@ -1,1 +1,2 @@
-# Sample EWED source code 
+# EWED
+Sample EWED source code
